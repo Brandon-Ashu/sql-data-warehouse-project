@@ -8,6 +8,7 @@ Script purpose:
   Run this script to re-define the DDL structure of 'bronze' tables
 ========================================================================================================
 */
+
 CREATE OR REPLACE PROCEDURE bronze.load_bronze()
 LANGUAGE plpgsql
 AS $$
