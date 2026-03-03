@@ -1,1 +1,122 @@
-
+/*
+=======================================================================================================
+DDL Script: Create Bronze Table
+=======================================================================================================
+Script purpose:
+  This script creates tables in the 'bronze' schema, dropping existing tables
+  if they already exist.
+  Run this script to re-define the DDL structure of 'bronze' tables
+========================================================================================================
+*/
+CREATE OR REPLACE PROCEDURE bronze.load_bronze()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_row_count INTEGER;
+    v_start_time TIMESTAMP;
+BEGIN
+    -- Start transaction
+    BEGIN
+        v_start_time := NOW();
+        RAISE NOTICE 'Starting bronze layer load at %', v_start_time;
+        
+        -- ====================================================================
+        -- Load CRM Customer Info
+        -- ====================================================================
+        RAISE NOTICE 'Loading bronze.crm_cust_info...';
+        TRUNCATE TABLE bronze.crm_cust_info;
+        
+        COPY bronze.crm_cust_info(cst_id, cst_key, cst_firstname, cst_lastname, 
+                                  cst_marital_status, cst_gndr, cst_create_date)
+        FROM 'C:/Users/Tolisso24/Downloads/sql-data-warehouse-project-main/sql-data-warehouse-project-main/datasets/sourcecrm_cust_info.csv'
+        DELIMITER ',' 
+        CSV HEADER;
+        
+        GET DIAGNOSTICS v_row_count = ROW_COUNT;
+        RAISE NOTICE '  Loaded % rows', v_row_count;
+        
+        -- ====================================================================
+        -- Load CRM Product Info
+        -- ====================================================================
+        RAISE NOTICE 'Loading bronze.crm_prd_info...';
+        TRUNCATE TABLE bronze.crm_prd_info;
+        
+        COPY bronze.crm_prd_info(prd_id, prd_key, prd_nm, pr_cost, prd_line, prd_start_dt, prd_end_dt)
+        FROM 'C:/Users/Tolisso24/Downloads/sql-data-warehouse-project-main/sql-data-warehouse-project-main/datasets/sourcecrm_prd_info.csv'
+        DELIMITER ',' 
+        CSV HEADER;
+        
+        GET DIAGNOSTICS v_row_count = ROW_COUNT;
+        RAISE NOTICE '  Loaded % rows', v_row_count;
+        
+        -- ====================================================================
+        -- Load CRM Sales Details
+        -- ====================================================================
+        RAISE NOTICE 'Loading bronze.crm_sales_details...';
+        TRUNCATE TABLE bronze.crm_sales_details;
+        
+        COPY bronze.crm_sales_details(sls_ord_num, sls_prd_key, sls_cust_id, sls_order_dt, 
+                                      sls_ship_dt, sls_due_dt, sls_sales, sls_quantity, sls_price)
+        FROM 'C:/Users/Tolisso24/Downloads/sql-data-warehouse-project-main/sql-data-warehouse-project-main/datasets/sourcecrm_sales_details.csv'
+        DELIMITER ',' 
+        CSV HEADER;
+        
+        GET DIAGNOSTICS v_row_count = ROW_COUNT;
+        RAISE NOTICE '  Loaded % rows', v_row_count;
+        
+        -- ====================================================================
+        -- Load ERP Customer AZ12
+        -- ====================================================================
+        RAISE NOTICE 'Loading bronze.erp_cust_az12...';
+        TRUNCATE TABLE bronze.erp_cust_az12;
+        
+        COPY bronze.erp_cust_az12(cid, bdate, gen)
+        FROM 'C:/Users/Tolisso24/Downloads/sql-data-warehouse-project-main/sql-data-warehouse-project-main/datasets/sourceerp_cust_az12.csv'
+        DELIMITER ',' 
+        CSV HEADER;
+        
+        GET DIAGNOSTICS v_row_count = ROW_COUNT;
+        RAISE NOTICE '  Loaded % rows', v_row_count;
+        
+        -- ====================================================================
+        -- Load ERP Location A101
+        -- ====================================================================
+        RAISE NOTICE 'Loading bronze.erp_loc_a101...';
+        TRUNCATE TABLE bronze.erp_loc_a101;
+        
+        COPY bronze.erp_loc_a101(cid, cntry)
+        FROM 'C:/Users/Tolisso24/Downloads/sql-data-warehouse-project-main/sql-data-warehouse-project-main/datasets/sourceerp_loc_a101.csv'
+        DELIMITER ',' 
+        CSV HEADER;
+        
+        GET DIAGNOSTICS v_row_count = ROW_COUNT;
+        RAISE NOTICE '  Loaded % rows', v_row_count;
+        
+        -- ====================================================================
+        -- Load ERP Product Category G1V2
+        -- ====================================================================
+        RAISE NOTICE 'Loading bronze.erp_px_cat_g1v2...';
+        TRUNCATE TABLE bronze.erp_px_cat_g1v2;
+        
+        COPY bronze.erp_px_cat_g1v2(id, cat, subcat, maintenance)
+        FROM 'C:/Users/Tolisso24/Downloads/sql-data-warehouse-project-main/sql-data-warehouse-project-main/datasets/sourceerp_px_cat_g1v2.csv'
+        DELIMITER ',' 
+        CSV HEADER;
+        
+        GET DIAGNOSTICS v_row_count = ROW_COUNT;
+        RAISE NOTICE '  Loaded % rows', v_row_count;
+        
+        -- Commit transaction
+        COMMIT;
+        
+        RAISE NOTICE 'Bronze layer load completed successfully at %', NOW();
+        RAISE NOTICE 'Total duration: % seconds', EXTRACT(EPOCH FROM (NOW() - v_start_time));
+        
+    EXCEPTION WHEN OTHERS THEN
+        -- Rollback on error
+        ROLLBACK;
+        RAISE NOTICE 'ERROR: %', SQLERRM;
+        RAISE;
+    END;
+END;
+$$;
