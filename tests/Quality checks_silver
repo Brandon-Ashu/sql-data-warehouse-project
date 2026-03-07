@@ -1,1 +1,239 @@
+/*
+  --============================================================================================================================
+  Quality Checks
+  --============================================================================================================================
+  Script Purpose:
+	  	This script performs various quality checks for data consistency,accuracy, and standardization accross the 'silver' schema.
+	  	It includes checks for:
+	  	- Null or duplicate primary key
+	  	- Unwanted spaces in string fields
+	  	- Data standardization and consistency
+	  	- Invalid date ranges and orders
+	  	- Data consistency between related fields
+  	
+  	Usage Notes:
+  		- Run this checks after loading data into silver layer.
+  		- Investigate and resolve any discrepancies found during the checks.
+ */
+
+--========================================================
+-- Quality check for crm_cust_info
+--=========================================================
+
+-- check for nulls or duplicates in primary key
+-- Expecttations: No results
+
+select 
+	cst_id,
+	count(*) 
+	from bronze.crm_cust_info
+	group by cst_id
+	having count(*) > 1 or cst_id is null;
+
+-- Check unwanted spaces
+-- Expectation: No results
+
+select 
+	cst_firstname
+	from bronze.crm_cust_info 
+	where cst_firstname != TRIM(cst_firstname)
+	
+-- Data standardization and consistency
+	select distinct cst_gndr
+	from bronze.crm_cust_info;
+
+-- Data standardization and consistency
+	select distinct cst_marital_status
+	from bronze.crm_cust_info;
+
+--=================================================================================
+--Quality checks for crm_prd_info
+--==================================================================================
+
+--Check for nulls or duplicates in primary key
+-- Expectation: No results
+
+select 
+	prd_id,
+	count(*)
+	from bronze.crm_prd_info
+	group by prd_id 
+	having count(*) > 1 or prd_id is null;
+
+-- Check for unwanted spaces
+-- Expectations: No results
+
+select 
+prd_nm
+from bronze.crm_prd_info
+where prd_nm != trim(prd_nm);
+
+--check for nulls or negative values
+-- Expectation: No results
+select 
+prd_cost
+from bronze.crm_prd_info
+where prd_cost < 0 or prd_cost  is null
+group by prd_cost ;
+
+-- check for data consistency and standardization
+select distinct prd_line
+from bronze.crm_prd_info
+
+-- check for invalid date orders
+select * from bronze.crm_prd_info
+where prd_end_dt < prd_start_dt ;
+
+select 
+	prd_id,
+	prd_key,
+	prd_nm,
+	prd_cost,
+	prd_line,
+	prd_start_dt,
+	lead(prd_start_dt) over(partition by prd_key order by prd_start_dt)-1 as prd_end_dt_test,
+	prd_end_dt 
+from bronze.crm_prd_info 
+where prd_key in ('AC-HE-HL-U509-R','AC-HE-HL-U509')
+
+--============================================================================
+-- Quality check for crm_sales_details
+--============================================================================
+
+-- Check for unwanted spaces
+-- Expectations: No results
+
+select sls_ord_num
+from bronze.crm_sales_details
+where sls_ord_num != TRIM(sls_ord_num);
+
+-- Check for invalid dates
+select * from bronze.crm_sales_details
+
+select
+nullif(sls_due_dt,0) as sls_due_dt
+from bronze.crm_sales_details 
+where sls_due_dt <=0 or length(sls_due_dt::text) != 8 
+or sls_due_dt > 20500101 
+or sls_due_dt < 19000101
+
+-- Check if order date is < shipping and due date
+
+select * 
+from bronze.crm_sales_details 
+where sls_order_dt > sls_ship_dt or sls_order_dt > sls_due_dt ;
+
+-- check data consistency between sales, quantity and price
+-- >> sales = quantity * price
+-- >> values must not be null,negative or zero.
+
+select distinct
+sls_sales as old_sales,
+sls_quantity,
+sls_price as old_price,
+case when sls_sales is null or sls_sales <=0 or sls_sales != sls_quantity * abs(sls_price)
+			then sls_quantity * abs(sls_price)
+		else sls_sales
+		end as sls_sales,
+		sls_quantity,
+		sls_price as sls_old_price,
+		case when sls_price is null or sls_price <=0
+			then sls_sales / nullif(sls_quantity,0)
+		else sls_price
+		end as sls_price
+from bronze.crm_sales_details 
+--====================================================================================
+-- Quality check for erp_cust_az12
+--====================================================================================
+
+-- check the cid for null values 
+-- remove the first 3 unwanted characters
+
+select * from bronze.erp_cust_az12
+where cid like '%AW00011000%'
+
+select 
+case when cid like 'NAS%' then substr(cid,4, length(cid))
+ else cid
+end as cid,
+bdate,
+gen
+from bronze.erp_cust_az12;
+
+-- check bdate for very old customers
+
+select 
+cid,
+case when bdate > current_date then null
+	else bdate
+end as bdate,
+gen
+from bronze.erp_cust_az12
+where bdate < '1924-01-01' or bdate > current_date;
+
+-- check for unanted spaces and null values in the gen column
+
+select distinct
+trim(gen) as gen
+from bronze.erp_cust_az12 
+
+
+-- check for data standardization & consistency
+
+select distinct
+case UPPER(TRIM(gen))
+	when 'M' then 'Male'
+	when 'F' then 'Female'
+else 'Unknown' end as gen
+from bronze.erp_cust_az12 
+
+--========================================================================================================
+-- Quality check for erp_loc_a101
+--========================================================================================================
+
+-- Repacing the minus in the primary key with a blank
+
+select 
+replace(cid, '-', '') as cid,
+cntry
+from bronze.erp_loc_a101
+
+-- standardization & consistency
+
+select 
+case when trim(cntry) = 'DE' then 'Germany'
+	 when trim(cntry) in ('US','USA') then 'United States'
+	 when trim(cntry) = '' or trim(cntry) is null then 'Unknown'
+     else trim(cntry)
+end as cntry
+from bronze.erp_loc_a101 
+
+select distinct 
+cntry as old_cntry,
+case when trim(cntry) = 'DE' then 'Germany'
+	 when trim(cntry) in ('US','USA') then 'United States'
+	 when trim(cntry) = '' or trim(cntry) is null then 'Unknown'
+     else trim(cntry)
+end as cntry
+from bronze.erp_loc_a101 
+
+
+--========================================================================================================
+-- Quality check for erp_px_cat_g1v2
+--========================================================================================================
+
+-- check for unwanted spaces
+-- expectations: no results
+
+select * from bronze.erp_px_cat_g1v2 
+where cat != trim(cat) or subcat != trim(subcat) or maintenance  != trim(maintenance)
+
+-- data standardization & consistency
+
+select distinct 
+cat,
+subcat,
+maintenance
+from bronze.erp_px_cat_g1v2
+
 
