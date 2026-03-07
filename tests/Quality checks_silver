@@ -14,7 +14,7 @@
   	Usage Notes:
   		- Run this checks after loading data into silver layer.
   		- Investigate and resolve any discrepancies found during the checks.
- 
+ ==========================================================================================================================
 */
 --========================================================
 -- Quality check for crm_cust_info
