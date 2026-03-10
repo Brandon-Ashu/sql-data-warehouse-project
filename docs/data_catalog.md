@@ -34,3 +34,23 @@
 |product_line| VARCHAR(50) | The specific product line or series to which the product belongs (e.g Road,Mountain,Touring,Unknown, Other sales)
 |start_date   | DATE                 |The date in which the product became available for sale or use, stored in 'YYYY-MM-DD'(e.g '2003-07-01')                           |
 
+
+3.** gold.fact_sales**
+    - **Purpose**: Stores transactional sales data for analytical purposes.
+    - **Columns**:
+
+
+|Column Name |     Data Type        |Description                                                                       |
+|-------------|----------------------|-----------------------------------------------------------------------------------|
+|order_number |     VARCHAR(50)             |A unique alphanumeric identifier for each sales order(e.g,'SO54496')     |
+|product_key  |  INT                 | Surrogate key linking order to the product dimension table                      |
+|customer_key|   INT                   |Surrogate key linking order to customer dimension table|
+|order_date  |  DATE                  | Date when the order was placed                        |
+|shipping_date   | DATE              |Date when the order was shipped to customer                                          |
+|due_date       | DATE               |  Date when the order payment was due                         |
+|sales_amount   | INT                 |  The total monetary value for the sale of the line item, in whole currency unit(e.g, 25)                    |
+|quantity        | VARCHAR(50)          | The number of units the product ordered for the line item (e.g, 1)                                   |
+|price    | INT               | The price per unit of the product for the line item, in whole currency units (e.g,25)      |    
+                         
+
+   
