@@ -1,4 +1,4 @@
-1. **gold.dim_customers**
+1. ##gold.dim_customers
    - **Purpose**: Stores customers details enriched with demographic and geographic data
    - **Columns**:
 
@@ -14,3 +14,6 @@
 |gender        | VARCHAR(50)          |The gender of the customer(e.g 'male','female')                                    |
 |birthdate     | DATE                 |Customer date of birth, formatted as YYYY-MM-DD(e.g '1971-05-10')                  |    
 |create_date   | DATE                 |The date and time when the customer record was created                             |
+
+
+2. 
